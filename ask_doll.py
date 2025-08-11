@@ -2,12 +2,13 @@ import argparse
 from langchain_community.document_loaders import FileSystemBlobLoader
 from langchain_community.document_loaders.generic import GenericLoader
 from langchain_community.document_loaders.parsers import PyMuPDFParser
-from langchain_core.messages import SystemMessage
+from langchain_core.messages import SystemMessage, trim_messages
 from langchain_core.tools import tool
 from langchain_core.vectorstores import InMemoryVectorStore
 from langchain_milvus import Milvus
 from langchain_ollama import ChatOllama, OllamaEmbeddings
 from langchain_text_splitters import RecursiveCharacterTextSplitter
+from langgraph.checkpoint.memory import MemorySaver
 from langgraph.graph import END, MessagesState, StateGraph
 from langgraph.prebuilt import ToolNode, tools_condition
 from pymilvus import MilvusClient
@@ -37,6 +38,14 @@ def query(query: str):
     return retriever.invoke(query)
 
 def contextualized_response(state):
+    trimmer = trim_messages(
+        max_tokens = 65,
+        strategy = "last",
+        token_counter = model,
+        include_system = True,
+        allow_partial = False,
+        start_on = "human",
+    )
 
     # collate fresh prints off the vector exPRESS
     recent_messages = [message for message in reversed(state['messages']) if message.type == 'tool']
@@ -61,6 +70,7 @@ def contextualized_response(state):
         
         """
     )
+
     conversation_messages = [
         message
         for message in state['messages']
@@ -71,6 +81,18 @@ def contextualized_response(state):
 
     response = llm.invoke(prompt)
     return {'messages': [response]}
+
+def output(prompt, config):
+    for step in graph.stream(
+        {'messages': [{'role': 'user', 'content': prompt}]},
+        stream_mode='values',
+        config=config,
+    ):
+        step['messages'][-1].pretty_print()
+
+        # physical record
+        with open(f'doll_answer.txt', 'a') as outfile:
+            outfile.write(f"{step['messages'][-1]}\n")
 
 
 if __name__ == '__main__':
@@ -96,25 +118,19 @@ if __name__ == '__main__':
     )
 
     if store == 'CLOUD' or (args.persist and args.persist == 'Y'):
-        client = MilvusClient(
-            uri=os.environ['ZILLIZ_URI'],
-            token=os.environ['ZILLIZ_TOKEN']
-        )
-        collections = client.list_collections()
-
         vector_store = Milvus(
             connection_args={'uri': os.environ['ZILLIZ_URI'], 'token': os.environ['ZILLIZ_TOKEN']},
             embedding_function=OllamaEmbeddings(model=model),
             collection_name=dir,
-            drop_old=False,  # True if drop existing collection
+            drop_old=False,  # True to drop collection if existing
             index_params={'index_type': 'FLAT', 'metric_type': 'L2'},
-            consistency_level='Strong',
+            consistency_level='Session',  # user-centric updates and performance
         )
     else:
         vector_store = InMemoryVectorStore(embedding=OllamaEmbeddings(model=model))
 
     if store == 'LOCAL':
-        # load all *.pdfs from folder
+        # index *.pdfs from directory
         loader = GenericLoader(
             blob_loader=FileSystemBlobLoader(
                 path=args.dir.split(':')[1],
@@ -124,7 +140,6 @@ if __name__ == '__main__':
         )
         docs = loader.load()
 
-        # split into 1000 char len chunks
         text_splitter = RecursiveCharacterTextSplitter(chunk_size=1000, chunk_overlap=25)
         split_docs = text_splitter.split_documents(docs)
 
@@ -156,7 +171,7 @@ if __name__ == '__main__':
     allows query_or_respond to respond directly if no tool call is made
     """
 
-    graph_builder = StateGraph(MessagesState)
+    graph_builder = StateGraph(state_schema=MessagesState)
 
     tools = ToolNode([query])
 
@@ -173,14 +188,10 @@ if __name__ == '__main__':
     graph_builder.add_edge('tools', 'contextualized_response')
     graph_builder.add_edge('contextualized_response', END)
 
-    graph = graph_builder.compile()
+    graph = graph_builder.compile(checkpointer=MemorySaver())
+    config = {'configurable': {'thread_id': 'ragdoll'}}
 
-    for step in graph.stream(
-        {'messages': [{'role': 'user', 'content': args.prompt}]},
-        stream_mode = 'values',
-    ):
-        step['messages'][-1].pretty_print()
-
-        # record responses
-        with open(f'doll_answer.txt', 'a') as outfile:
-            outfile.write(f"{step['messages'][-1]}\n")
+    prompt = args.prompt
+    while prompt.lower() != 'n':
+        output(prompt, config)
+        prompt = input("\n\nAny further prompts? ('N' to exit): ")
