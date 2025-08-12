@@ -1,7 +1,7 @@
 # RAGdoll
 Retrieval augmented generation (RAG)doll that
 - indexes your provided *.pdf (text-only) to vector store (in-memory or cloud)
-- leverages hybrid search (vector similarity + keyword matching)
+- leverages vector similarity + keyword matching hybrid search (cloud only)
 - grounds responses to your provided *.pdf files
 
 ## Example
@@ -11,7 +11,6 @@ Enter prompt (or 'q' to exit): What are paged optimizers in QLORA?
 ================================== Ai Message ==================================
 
 Paged Optimizers is a technique used in QLORA to prevent memory spikes during gradient checkpointing. Here's a simplified explanation:
-
 ```
 
 ## Get Started
@@ -40,14 +39,6 @@ Specify directory of *.pdf files for model reference
 ```bash
 python main.py -d research_papers --local
 ```
-### Swap Ollama model out with another (that has embedding and tool support)
-```bash
-python main.py -d <your-directory-name> --local --model mistral:7b
-```
-### Tweak model temperature and max token generation
-```bash
-python main.py -d <your-directory-name> --local --temp 0.88 --num_pred 1024
-```
 ## Cloud
 ### Use [Zilliz](https://zilliz.com/pricing)'s *free* tier
 - 5 GB storage
@@ -60,13 +51,21 @@ export ZILLIZ_URI=<your-zilliz-uri>
 export ZILLIZ_TOKEN=<your-zilliz-token>
 ```
 
-### Upload texts to cloud vector store
+### 1. Upload texts to cloud vector store
 The directory name will become the vector store collection name
 ```bash
-python main.py -d <your-directory-name> --persist
+python main.py -d <your-directory-name> --local --persist
 ```
-### Query from cloud vector store
+### 2. Query from cloud vector store
 No indexing, should feel responsive
 ```bash
-python main.py -d <your-directory-name>
+python main.py -d <your-collection-name>
+```
+### Tweak LLM temperature and max token generation
+```bash
+python main.py -d <your-collection-name> --temp 0.88 --num_pred 1024
+```
+### Swap Ollama model with another (that has embedding and tool support)
+```bash
+python main.py -d <your-collection-name> --model mistral:7b
 ```
