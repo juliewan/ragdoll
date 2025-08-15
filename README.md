@@ -1,8 +1,10 @@
 # RAGdoll
-Retrieval augmented generation (RAG)doll that
-- indexes your provided *.pdf (text-only) to vector store (in-memory or cloud)
-- leverages vector similarity + keyword matching hybrid search (cloud only)
-- grounds responses to your provided *.pdf files
+Retrieval-augmented generation (RAG) doll that
+- Indexes your provided *.pdf (text-only) to vector store (in-memory or cloud)
+- Leverages
+  - vector similarity + keyword match hybrid search (cloud)
+  - reranked similarity search (in-memory)
+- Grounds responses to your provided *.pdf files
 
 ## Example
 ```bash
@@ -16,7 +18,7 @@ Paged Optimizers is a technique used in QLORA to prevent memory spikes during gr
 ## Get Started
 
 ### Use [Ollama](https://github.com/ollama/ollama/blob/main/README.md#quickstart) for *free* local inferencing
-Download a text model with embedding and tool support that can run on your system
+Download model with embedding and tool support.
 ```bash
 ollama pull llama3.1:8b
 ```
@@ -31,8 +33,8 @@ pyenv activate <your-virtualenv-name>
 pip install -r requirements.txt
 ```
 
-### Prompt with in-memory vector store
-Specify directory of *.pdf files for model reference
+### Use with in-memory vector store
+Specify directory of *.pdf files for model context
 - Indexed as in-memory vector store
 - Retrieves most relevant excerpts to your prompt
 - Responds to *contextualized* prompt
@@ -52,20 +54,16 @@ export ZILLIZ_TOKEN=<your-zilliz-token>
 ```
 
 ### 1. Upload texts to cloud vector store
-The directory name will become the vector store collection name
+The collection name will be the same as the directory name.
 ```bash
 python main.py -d <your-directory-name> --local --persist
 ```
 ### 2. Query from cloud vector store
-No indexing, should feel responsive
+Et voila. No indexing step, should feel responsive.
 ```bash
 python main.py -d <your-collection-name>
 ```
-### Tweak LLM temperature and max token generation
+### Tweak temperature and max token output
 ```bash
 python main.py -d <your-collection-name> --temp 0.88 --num_pred 1024
-```
-### Swap Ollama model with another (that has embedding and tool support)
-```bash
-python main.py -d <your-collection-name> --model mistral:7b
 ```
