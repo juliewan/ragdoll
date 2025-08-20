@@ -1,10 +1,16 @@
 # RAGdoll
 Retrieval-augmented generation (RAG) doll that
-- Indexes your provided *.pdf (text-only) to vector store (in-memory or cloud)
-- Leverages
-  - vector similarity + keyword match hybrid search (cloud)
-  - reranked similarity search (in-memory)
-- Grounds responses to your provided *.pdf files
+- Indexes your *.pdfs (text-only, no img yet) to in-memory/cloud vector store as semantically coherent chunks
+  - deriving semantically coherent chunks from your texts is a resource intensive step, try to set up cloud ASAP to persist embeddings
+- Retrieves via
+  - **hybrid/fusion (cloud)**
+    - vector semantic similarity
+    - lexical search (keyword match)
+    - weighted reranking
+  - **relevance reranking (in-memory)**
+    - vector semantic similarity
+    - cross-encoder reranking
+- Grounds responses to your provided *.pdf context for bespoke feel without fine-tuning
 
 ## Example
 ```bash
@@ -17,8 +23,8 @@ Paged Optimizers is a technique used in QLORA to prevent memory spikes during gr
 
 ## Get Started
 
-### Use [Ollama](https://github.com/ollama/ollama/blob/main/README.md#quickstart) for *free* local inferencing
-Download model with embedding and tool support.
+### Use [Ollama](https://github.com/ollama/ollama/blob/main/README.md#quickstart) served model for *free* local inferencing
+Download the following model that supports embeddings and tools.
 ```bash
 ollama pull llama3.1:8b
 ```
@@ -34,10 +40,10 @@ pip install -r requirements.txt
 ```
 
 ### Use with in-memory vector store
-Specify directory of *.pdf files for model context
+Specify directory of *.pdf files to interactively query
 - Indexed as in-memory vector store
-- Retrieves most relevant excerpts to your prompt
-- Responds to *contextualized* prompt
+- Reranks most semantically relevant excerpts to your prompt
+- Interpolates prompt with retrieved context
 ```bash
 python main.py -d research_papers --local
 ```

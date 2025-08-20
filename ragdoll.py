@@ -1,3 +1,4 @@
+from __future__ import annotations
 from langchain_community.document_compressors import FlashrankRerank
 from langchain_community.document_loaders import FileSystemBlobLoader
 from langchain_community.document_loaders.generic import GenericLoader
@@ -5,6 +6,7 @@ from langchain_community.document_loaders.parsers import PyMuPDFParser
 from langchain.retrievers import ContextualCompressionRetriever
 from langchain.tools import Tool
 from langchain_core.vectorstores import InMemoryVectorStore
+from langchain_experimental.text_splitter import SemanticChunker
 from langchain_milvus import BM25BuiltInFunction, Milvus
 from langchain_ollama import ChatOllama, OllamaEmbeddings
 from langchain_text_splitters import RecursiveCharacterTextSplitter
@@ -26,21 +28,25 @@ class Ragdoll:
 
     def rerank_retrieve(self, query: str):
         """
-            Rerank to boost similarity search results from in-memory store
+            Cross-Encoder rerank to boost similarity search
         """
+        FlashrankRerank.model_rebuild()
+
         rerank_retriever = ContextualCompressionRetriever(
             base_retriever=self.vector_store.as_retriever(search_kwargs={'k': 10}),
-            base_compressor=FlashrankRerank(model="ms-marco-MiniLM-L-12-v2", top_n=5),
+            base_compressor=FlashrankRerank(model="ms-marco-MiniLM-L-12-v2", top_n=3),
         )
 
         return rerank_retriever.invoke(query)
 
     def hybrid_retrieve(self, query: str):
         """
-            Semantic similarity x keyword search
+            AKA "Fusion Retrieval"
+            semantic similarity x keyword search
+            with weighted reranking
         """
         return self.vector_store.similarity_search(
-            query, k=5, ranker_type="weighted", ranker_params={"weights": [0.3, 0.7]}
+            query, k=3, ranker_type="weighted", ranker_params={"weights": [0.3, 0.7]}
         )
 
     def respond(self, prompt):
@@ -104,12 +110,14 @@ class Ragdoll:
 
     def build_vector_store(self):
         """
-            - establishes connection to cloud vector store
-              that supports hybrid semantic and keyword search
-            OR
-            - establishes in-memory vector store
+            SPECIFIES EITHER
+            - cloud collection with multi-vector field
+              that supports semantic and keyword search
+              and weighted re-ranking
+            - in-memory vector store
+
             THEN
-            - indexes docs as required
+            - indexes texts as required
         """
         if not self.local or self.persist:
             self.vector_store = Milvus(
@@ -145,7 +153,8 @@ class Ragdoll:
         )
         docs = loader.load()
 
-        text_splitter = RecursiveCharacterTextSplitter(chunk_size=1000, chunk_overlap=25)
+        text_splitter = SemanticChunker(OllamaEmbeddings(model=self.model),
+                                        breakpoint_threshold_type="percentile")
         split_docs = text_splitter.split_documents(docs)
 
         self.vector_store.add_documents(documents=split_docs)
