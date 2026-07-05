@@ -1,0 +1,11 @@
+# Session chat logs
+logs/
+
+# Python
+__pycache__/
+*.pyc
+venv/
+
+# Editor / OS
+.idea/
+.DS_Store

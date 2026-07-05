@@ -14,26 +14,28 @@ Retrieval-augmented generation (RAG) doll that
 
 ## Example
 ```bash
-Enter prompt (or 'q' to exit): What are paged optimizers in QLORA?
+Enter prompt (or 'q' to exit): ELI5 paged optimizers
 
 ================================== Ai Message ==================================
 
-Paged Optimizers is a technique used in QLORA to prevent memory spikes during gradient checkpointing. Here's a simplified explanation:
+Paged optimizers are like a special kind of memory manager for computers...
 ```
 
 ## Get Started
 
 ### Use [Ollama](https://github.com/ollama/ollama/blob/main/README.md#quickstart) served model for *free* local inferencing
-Download the following model that supports embeddings and tools.
+Download model with tool support:
 ```bash
 ollama pull llama3.1:8b
 ```
+The dedicated embeddings model `BAAI/bge-small-en-v1.5` (384-d, ONNX) for indexing, semantic chunking, and retrieving will download automatically via [fastembed](https://github.com/qdrant/fastembed) at first run.
 ### Set up
+Python 3.11+:
 ```bash
-pyenv virtualenv 3.12.5 <your-virtualenv-name>
+python -m venv venv
 ```
 ```bash
-pyenv activate <your-virtualenv-name>
+source venv/bin/activate        # Windows: venv\Scripts\activate
 ```
 ```bash
 pip install -r requirements.txt
