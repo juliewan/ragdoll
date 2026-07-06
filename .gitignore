@@ -9,3 +9,4 @@ venv/
 # Editor / OS
 .idea/
 .DS_Store
+.serena/

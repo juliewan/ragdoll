@@ -1,4 +1,9 @@
 # RAGdoll
+
+<p align="center">
+  <img src="marie_ragdoll.png" alt="Marie as a ballerina in the style of Reine Virely-Colmez " width="300">
+</p>
+
 Retrieval-augmented generation (RAG) doll that
 - Indexes your *.pdfs (text-only, no img yet) to in-memory/cloud vector store as semantically coherent chunks
   - deriving semantically coherent chunks from your texts is a resource intensive step, try to set up cloud ASAP to persist embeddings
